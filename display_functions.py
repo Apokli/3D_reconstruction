@@ -15,8 +15,9 @@ def show_keypoints(rimg, rkps, name="keypoints", console=True):
     results = cv2.drawKeypoints(rimg, rkps, rimg, color=(255, 0, 255))
     if console:
         cv2.imshow(name, results)
-        cv2.waitKey(0)
+        key = cv2.waitKey(0) & 0xFF
         cv2.destroyAllWindows()
+        return key
     else:
         return results
 
@@ -36,8 +37,9 @@ def show_match_results(rimg1, rkps1, rimg2, rkps2, matches, name="match results"
     results = cv2.drawMatchesKnn(rimg1, rkps1, rimg2, rkps2, matches, None, flags=2)
     if console:
         cv2.imshow(name, results)
-        cv2.waitKey(0)
+        key = cv2.waitKey(0) & 0xFF
         cv2.destroyAllWindows()
+        return key
     else:
         return results
 

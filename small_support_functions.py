@@ -3,6 +3,7 @@
 import numpy as np
 import cv2
 import os
+import config
 
 
 def get_photos(route, display_size=(800, 1200)):
@@ -115,4 +116,168 @@ def Rt2Cam_mat(R, t):
     Cam_mat[:, 3] = np.float32(t.T)
 
     return Cam_mat
+
+
+def load_config(file_route):
+    cnt = 0
+    try:
+        config_txt = open(file_route + "/config.txt", 'r', encoding="utf-8")
+    except:
+        print("无法打开或找不到config.txt")
+        return False
+    for line in config_txt.readlines():
+        if line == "\n":
+            continue
+        title, value = line.strip().replace(" ", "").split('=')
+        if title == "use_ratio":
+            cnt += 1
+            config.use_ratio = float(value)
+        if title == "dist_coef":
+            cnt += 1
+            config.dist_coef = float(value)
+        if title == "mass_dist":
+            cnt += 1
+            config.mass_dist = float(value)
+        if title == "rep_err":
+            cnt += 1
+            config.rep_err = float(value)
+        if title == "rep_per":
+            cnt += 1
+            config.rep_per = float(value)
+        if title == "draw_mask":
+            cnt += 1
+            if value == "True":
+                config.draw_mask = True
+            elif value == "False":
+                config.draw_mask = False
+            else:
+                cnt -= 1
+        if title == "use_available_mask":
+            cnt += 1
+            if value == "True":
+                config.use_available_mask = True
+            elif value == "False":
+                config.use_available_mask = False
+            else:
+                cnt -= 1
+        if title == "acquiesce_mask":
+            cnt += 1
+            if value == "True":
+                config.acquiesce_mask = True
+            elif value == "False":
+                config.acquiesce_mask = False
+            else:
+                cnt -= 1
+        if title == "save_drawn_mask":
+            cnt += 1
+            if value == "True":
+                config.save_drawn_mask = True
+            elif value == "False":
+                config.save_drawn_mask = False
+            else:
+                cnt -= 1
+        if title == "show_features":
+            cnt += 1
+            if value == "True":
+                config.show_features = True
+            elif value == "False":
+                config.show_features = False
+            else:
+                cnt -= 1
+        if title == "show_matches":
+            cnt += 1
+            if value == "True":
+                config.show_matches = True
+            elif value == "False":
+                config.show_matches = False
+            else:
+                cnt -= 1
+        if title == "show_init_cloud":
+            cnt += 1
+            if value == "True":
+                config.show_init_cloud = True
+            elif value == "False":
+                config.show_init_cloud = False
+            else:
+                cnt -= 1
+        if title == "show_new_kp3ds":
+            cnt += 1
+            if value == "True":
+                config.show_new_kp3ds = True
+            elif value == "False":
+                config.show_new_kp3ds = False
+            else:
+                cnt -= 1
+        if title == "show_raw_structure":
+            cnt += 1
+            if value == "True":
+                config.show_raw_structure = True
+            elif value == "False":
+                config.show_raw_structure = False
+            else:
+                cnt -= 1
+        if title == "show_raw_residuals":
+            cnt += 1
+            if value == "True":
+                config.show_raw_residuals = True
+            elif value == "False":
+                config.show_raw_residuals = False
+            else:
+                cnt -= 1
+        if title == "show_tmp_structure":
+            cnt += 1
+            if value == "True":
+                config.show_tmp_structure = True
+            elif value == "False":
+                config.show_tmp_structure = False
+            else:
+                cnt -= 1
+        if title == "show_tmp_residuals":
+            cnt += 1
+            if value == "True":
+                config.show_tmp_residuals = True
+            elif value == "False":
+                config.show_tmp_residuals = False
+            else:
+                cnt -= 1
+        if title == "show_final_structure":
+            cnt += 1
+            if value == "True":
+                config.show_final_structure = True
+            elif value == "False":
+                config.show_final_structure = False
+            else:
+                cnt -= 1
+    if cnt == 18:
+        print("config successfully loaded!")
+        return True
+    else:
+        print("missing parameters or check spelling \"True\", \"False\"")
+        return False
+
+
+def save_config(file_route):
+    config_txt = open(file_route + "/config.txt", 'w', encoding="utf-8")
+    config_txt.write("use_ratio = " + str(config.use_ratio) + "\n")
+    config_txt.write("dist_coef = " + str(config.dist_coef) + "\n")
+    config_txt.write("\n")
+    config_txt.write("mass_dist = " + str(config.mass_dist) + "\n")
+    config_txt.write("rep_err = " + str(config.rep_err) + "\n")
+    config_txt.write("rep_per = " + str(config.rep_per) + "\n")
+    config_txt.write("\n")
+    config_txt.write("draw_mask = " + str(config.draw_mask) + "\n")
+    config_txt.write("use_available_mask = " + str(config.use_available_mask) + "\n")
+    config_txt.write("acquiesce_mask = " + str(config.acquiesce_mask) + "\n")
+    config_txt.write("save_drawn_mask = " + str(config.save_drawn_mask) + "\n")
+    config_txt.write("\n")
+    config_txt.write("show_features = " + str(config.show_features) + "\n")
+    config_txt.write("show_matches = " + str(config.show_matches) + "\n")
+    config_txt.write("show_init_cloud = " + str(config.show_init_cloud) + "\n")
+    config_txt.write("show_new_kp3ds = " + str(config.show_new_kp3ds) + "\n")
+    config_txt.write("show_raw_structure = " + str(config.show_raw_structure) + "\n")
+    config_txt.write("show_raw_residuals = " + str(config.show_raw_residuals) + "\n")
+    config_txt.write("show_tmp_structure = " + str(config.show_tmp_structure) + "\n")
+    config_txt.write("show_tmp_residuals = " + str(config.show_tmp_residuals) + "\n")
+    config_txt.write("show_final_structure = " + str(config.show_final_structure) + "\n")
+
 

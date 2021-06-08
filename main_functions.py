@@ -4,13 +4,15 @@ import numpy as np
 import cv2
 from small_support_functions import *
 from display_functions import *
+import config
         
 
-def extract_features(image_list, resize_ratio, resized_image_list, image_name_list, draw_mask):
+def extract_features(image_list, use_ratio, resize_ratio, resized_image_list, image_name_list, draw_mask):
     """
     进行SIFT特征点提取
 
     :param image_list: 图片列表
+    :param use_ratio: 图片尺度缩放比
     :param resize_ratio: 显示图片放缩比
     :param resized_image_list: 显示图片列表
     :param image_name_list: 图片名称列表
@@ -24,33 +26,44 @@ def extract_features(image_list, resize_ratio, resized_image_list, image_name_li
     desc_list = []
     colors_list = []
     for i in range(total_size):
+        org_image = image_list[i]
+        x, y = org_image.shape[0:2]
+        use_image = cv2.resize(org_image, (int(y / use_ratio), int(x / use_ratio)))
         # 掩模绘制
         if draw_mask:
             mask = draw_mask(resized_image_list[i], resize_ratio,
                              image_name_list[i].strip(".jpg").strip(".jpeg") + "_mask.txt")
-            kp, desc = sift_model.detectAndCompute(cv2.cvtColor(image_list[i], cv2.COLOR_RGB2GRAY), mask)
+            use_kp, desc = sift_model.detectAndCompute(cv2.cvtColor(use_image, cv2.COLOR_RGB2GRAY), mask)
 
         else:
-            kp, desc = sift_model.detectAndCompute(cv2.cvtColor(image_list[i], cv2.COLOR_RGB2GRAY), None)
-        kp_list.append(kp)
+            use_kp, desc = sift_model.detectAndCompute(cv2.cvtColor(use_image, cv2.COLOR_RGB2GRAY), None)
+        kp = []
         r_kp = []
         colors = []
-        for kp_item in kp:
-            x = kp_item.pt[0]
-            y = kp_item.pt[1]
+        for use_kp_item in use_kp:
+            x = use_kp_item.pt[0] * use_ratio
+            y = use_kp_item.pt[1] * use_ratio
             color = image_list[i][int(y)][int(x)]
             colors.append(color)
             r_kp_item = cv2.KeyPoint()
             r_kp_item.pt = (x / resize_ratio, y / resize_ratio)
             r_kp.append(r_kp_item)
+            kp_item = cv2.KeyPoint()
+            kp_item.pt = (x, y)
+            kp.append(kp_item)
+        kp_list.append(kp)
         resized_kp_list.append(r_kp)
         colors_list.append(colors)
         desc_list.append(desc)
         print("features extraction complete:" + str(i + 1) + " kp_cnts:" + str(len(kp)))
+        if config.show_features:
+            key = show_keypoints(resized_image_list[i], r_kp, "keypoints_" + str(i), True)
+            if key == 27:
+                config.show_features = False
     return kp_list, resized_kp_list, desc_list, colors_list
 
 
-def match_features(desc_list):
+def match_features(desc_list, rimgs=None, rkps=None, show_matches=False):
     """
     特征点匹配
 
@@ -65,10 +78,14 @@ def match_features(desc_list):
         matches = bf.knnMatch(descs1, descs2, k=2)
         good_matches = []
         for m, n in matches:
-            if m.distance < 0.7 * n.distance:
+            if m.distance < config.dist_coef * n.distance:
                 good_matches.append([m])
         good_matches_list.append(good_matches)
         print("features matching complete:" + str(i + 1) + " match_cnts:" + str(len(good_matches)))
+        if config.show_matches:
+            key = show_match_results(rimgs[i], rkps[i], rimgs[i + 1], rkps[i + 1], good_matches, "matches_" + str(i), True)
+            if key == 27:
+                config.show_matches = False
     return good_matches_list
 
 
@@ -173,7 +190,7 @@ def prep_pnp_points(matches, d2to3ds, structure, kps):
     return world_pts, image_pts, pnp_matches
 
 
-def prep_next_pts(K, R1, t1, R2, t2, kps1, kps2, matches, mass_center, err_purge_thresh, err_purge_percentage, dist_purge_thresh):
+def prep_next_pts(K, R1, t1, R2, t2, kps1, kps2, matches, mass_center, colors1, err_purge_thresh, err_purge_percentage, dist_purge_thresh):
     """
     筛选将插入的空间点
 
@@ -194,6 +211,7 @@ def prep_next_pts(K, R1, t1, R2, t2, kps1, kps2, matches, mass_center, err_purge
     output_container = []
     kp3ds = []
     purged_matches = []
+    new_colors = []
 
     pts1 = np.asarray([kps1[match[0].queryIdx].pt for match in matches])
     pts2 = np.asarray([kps2[match[0].trainIdx].pt for match in matches])
@@ -213,13 +231,14 @@ def prep_next_pts(K, R1, t1, R2, t2, kps1, kps2, matches, mass_center, err_purge
             if dist[dist.argmax()] > dist_purge_thresh:
                 continue
             else:
-                output_container.append([kp3d[0], match, this_max_err])
-    output_container.sort(key=lambda a: a[2])
+                output_container.append([kp3d[0], match, colors1[match[0].queryIdx], this_max_err])
+    output_container.sort(key=lambda a: a[3])
     for i in range(int(len(output_container) * (1 - err_purge_percentage))):
         kp3ds.append(output_container[i][0])
         purged_matches.append(output_container[i][1])
+        new_colors.append(output_container[i][2])
 
-    return np.array(kp3ds).squeeze(), purged_matches
+    return np.array(kp3ds).squeeze(), purged_matches, np.array(new_colors)
 
 
 def fusion_structure(matches, d2to3ds, next_d2to3ds, structure, next_structure, struct_colors, colors1, R1, t1, R2, t2, K, kps1, kps2, purge_thresh):
